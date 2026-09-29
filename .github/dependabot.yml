@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # SpoofGuard has zero runtime dependencies, so the only supply-chain surface
+  # to keep current is the GitHub Actions used in CI.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
