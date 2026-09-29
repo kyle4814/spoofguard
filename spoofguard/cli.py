@@ -44,7 +44,10 @@ def _print_text(report: EmailSecurityReport) -> None:
         print(f"  {f.check.ljust(width)}  {f.status:<8}{f.detail}")
     actions = [f for f in report.findings if f.status in ("FAIL", "WARN") and f.fix]
     print()
-    if actions:
+    if report.grade.startswith("UNKNOWN"):
+        print("Not assessed — one or more checks could not complete (UNKNOWN "
+              "above). This is never scored as strong; re-run when DNS is reachable.")
+    elif actions:
         print("What to fix:")
         for f in actions:
             print(f"  - [{f.check}] {f.fix}")

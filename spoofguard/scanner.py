@@ -186,14 +186,20 @@ def _spf(domain: str, fetch: FetchFn) -> Finding:
                        "Publish exactly ONE SPF TXT record: merge every sender "
                        "into a single v=spf1 record ending in -all.")
     spf = spf_records[0]
-    # Read the qualifier on the LAST `all` mechanism (a token ending in "all").
-    # SPF qualifiers: - fail (good), ~ softfail, ? neutral, + pass (and a bare
-    # `all` with no qualifier DEFAULTS to +all = pass). Substring matching gets
-    # this wrong: `+all` and bare `all` both authorise ANY sender, which is
-    # worse than no SPF, but a naive "ends with all -> soft" read graded them
-    # WARN. They must be FAIL.
+    # Read the qualifier on the FIRST `all` mechanism. RFC 7208 §4.6.2: SPF
+    # mechanisms are evaluated left-to-right and the FIRST match wins; `all`
+    # always matches, so the first `all`-mechanism is the one a real receiver
+    # applies, and anything after it is unreachable. Scanning in reverse would
+    # read whichever `all` was written LAST — e.g. `v=spf1 +all -all` is wide
+    # open (+all matches first) yet a reverse read sees -all and calls it
+    # "strong": a false PASS on a spoofable domain, the worst error possible.
+    # Match the mechanism EXACTLY (strip the qualifier, compare to "all") so a
+    # domain literally ending in "…all" cannot masquerade as an all-mechanism.
+    # SPF qualifiers: - fail (good), ~ softfail, ? neutral, + pass; a bare
+    # `all` with no qualifier DEFAULTS to +all = pass, so both authorise ANY
+    # sender and must be FAIL.
     tokens = spf.lower().split()
-    all_tok = next((t for t in reversed(tokens) if t.endswith("all")), None)
+    all_tok = next((t for t in tokens if t.lstrip("+-~?") == "all"), None)
     if all_tok == "-all":
         return Finding("SPF", "PASS", f"Strong SPF (hard fail): {spf}", "")
     if all_tok in ("+all", "all"):
@@ -280,8 +286,13 @@ def _dkim(domain: str, fetch: FetchFn) -> Finding:
     for sel in _DKIM_SELECTORS:
         d = _query(f"{sel}._domainkey.{domain}", "TXT", fetch)
         recs = [str(a.get("data", "")) for a in d.get("Answer", []) or []]
-        if any("v=dkim1" in r.lower() or "k=rsa" in r.lower() or "p=" in r
-               for r in recs):
+        # A selector "has a key" only if it publishes a NON-EMPTY p= tag,
+        # parsed as a real DKIM tag rather than matched as a substring.
+        # RFC 6376 §3.6.1: an empty p= (`v=DKIM1; p=`) is an explicitly REVOKED
+        # key — there is no signing key — and a bare "p=" substring can also
+        # appear inside unrelated records. `_dmarc_tag` parses `key=value;`
+        # tags and returns "" for both the revoked and the substring cases.
+        if any(_dmarc_tag(r, "p") for r in recs):
             found.append(sel)
     if found:
         return Finding("DKIM", "PASS",

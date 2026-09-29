@@ -42,7 +42,11 @@ def render_report_md(report: EmailSecurityReport) -> str:
         L.append(f"| **{f.check}** | {_MARK[f.status]} {f.status} | {f.detail} |")
     L.append("")
     actions = [f for f in report.findings if f.status in ("FAIL", "WARN") and f.fix]
-    if actions:
+    if report.grade.startswith("UNKNOWN"):
+        L.append("## Not assessed — scan incomplete")
+        L.append("One or more checks could not complete (marked UNKNOWN above). "
+                 "This is never scored as strong; re-run when DNS is reachable.")
+    elif actions:
         L.append("## What to fix (in priority order)")
         crit = [f for f in actions if f.check in CRITICAL_CHECKS]
         rest = [f for f in actions if f.check not in CRITICAL_CHECKS]
@@ -100,8 +104,14 @@ def render_report_html(report: EmailSecurityReport,
             "</tr>")
 
     actions = [f for f in report.findings if f.status in ("FAIL", "WARN") and f.fix]
-    fixes_section = ""
-    if actions:
+    if report.grade.startswith("UNKNOWN"):
+        fixes_section = """
+    <section>
+      <h2>Not assessed — scan incomplete</h2>
+      <p>One or more checks could not complete (marked UNKNOWN above). This is
+      never scored as strong; re-run when DNS is reachable.</p>
+    </section>"""
+    elif actions:
         crit = [f for f in actions if f.check in CRITICAL_CHECKS]
         rest = [f for f in actions if f.check not in CRITICAL_CHECKS]
         items = "".join(
