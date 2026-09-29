@@ -1,0 +1,11 @@
+# RFC 9116 security.txt for the SpoofGuard project.
+# This file lives in the repo as the canonical reference copy. If SpoofGuard
+# is ever served from its own domain, publish this same content at
+# https://<that-domain>/.well-known/security.txt — the Canonical field below
+# should then point at that live URL.
+
+Contact: https://github.com/kyle4814/spoofguard/security/advisories/new
+Policy: https://github.com/kyle4814/spoofguard/blob/main/SECURITY.md
+Preferred-Languages: en
+Canonical: https://github.com/kyle4814/spoofguard/blob/main/.well-known/security.txt
+Expires: 2027-09-29T00:00:00.000Z
