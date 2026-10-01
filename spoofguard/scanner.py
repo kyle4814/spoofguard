@@ -238,6 +238,15 @@ def _dmarc_tag(rec: str, tag: str) -> str:
     return ""
 
 
+def _dkim_has_key(rec: str) -> bool:
+    """True only for a NON-EMPTY DKIM `p=` tag, parsed as a tag, never a
+    substring. RFC 6376 §3.6.1: `v=DKIM1; p=` is an explicitly REVOKED key
+    (seen live: gmail.com selector 20230601, 2026-10-01). Surrounding TXT
+    quotes are stripped first, so a quoted `"v=DKIM1; p="` is revoked too."""
+    clean = rec.replace('" "', "").strip().strip('"')
+    return bool(_dmarc_tag(clean, "p").strip().strip('"'))
+
+
 def _dmarc_policy(rec: str) -> str:
     """The DMARC domain policy (`p=`), lowercased, or ""."""
     return _dmarc_tag(rec, "p")
@@ -299,7 +308,7 @@ def _dkim(domain: str, fetch: FetchFn) -> Finding:
         # key — there is no signing key — and a bare "p=" substring can also
         # appear inside unrelated records. `_dmarc_tag` parses `key=value;`
         # tags and returns "" for both the revoked and the substring cases.
-        if any(_dmarc_tag(r, "p") for r in recs):
+        if any(_dkim_has_key(r) for r in recs):
             found.append(sel)
     if found:
         return Finding("DKIM", "PASS",

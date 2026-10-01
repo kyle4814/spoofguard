@@ -57,6 +57,10 @@ class TestDkimRevokedAndSubstring(unittest.TestCase):
         r = assess_email_security("d.com", _make_fetch(recs))
         return next(f for f in r.findings if f.check == "DKIM")
 
+    def test_quoted_revoked_empty_p_is_not_pass(self):
+        # DoH data can arrive wrapped in TXT quotes; '"v=DKIM1; p="' is still revoked.
+        self.assertNotEqual(self._dkim('"v=DKIM1; p="').status, "PASS")
+
     def test_revoked_empty_p_is_not_pass(self):
         self.assertNotEqual(self._dkim("v=DKIM1; p=").status, "PASS")
 
