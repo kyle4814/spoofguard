@@ -136,9 +136,16 @@ def _query(name: str, rrtype: str, fetch: FetchFn) -> dict:
     except Exception as e:
         raise LookupFailed(f"fetch failed for {name}/{rrtype}: {e}") from e
     try:
-        return json.loads(raw.decode("utf-8"))
+        d = json.loads(raw.decode("utf-8"))
     except Exception as e:
         raise LookupFailed(f"unparseable DoH response for {name}/{rrtype}: {e}") from e
+    # A resolver-level failure (SERVFAIL=2, REFUSED=5, any rcode other than
+    # NOERROR=0 / NXDOMAIN=3) arrives as valid JSON with no Answer. It is a
+    # failed read, never "record absent". NXDOMAIN stays a real empty answer.
+    status = d.get("Status") if isinstance(d, dict) else None
+    if status is not None and status not in (0, 3):
+        raise LookupFailed(f"resolver returned rcode {status} for {name}/{rrtype}")
+    return d
 
 
 def _txt_records(name: str, fetch: FetchFn) -> List[str]:

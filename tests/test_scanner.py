@@ -288,3 +288,28 @@ class TestTriageDomains(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestResolverFailureIsUnknown(unittest.TestCase):
+    """A resolver SERVFAIL/REFUSED is valid JSON with no Answer. It is a failed
+    read (UNKNOWN), never 'record absent'. NXDOMAIN (3) stays a real empty
+    answer. Found 2026-10-01: Status 2 graded 'FAIL: No SPF record'."""
+
+    def _status_fetch(self, status):
+        def fetch(url):
+            return json.dumps({"Status": status}).encode()
+        return fetch
+
+    def test_servfail_and_refused_are_unknown_not_fail(self):
+        for status in (2, 5):
+            r = assess_email_security("x.com", self._status_fetch(status))
+            spf = next(f for f in r.findings if f.check == "SPF")
+            dmarc = next(f for f in r.findings if f.check == "DMARC")
+            self.assertEqual(spf.status, "UNKNOWN", status)
+            self.assertEqual(dmarc.status, "UNKNOWN", status)
+            self.assertTrue(r.grade.startswith("UNKNOWN"), status)
+
+    def test_nxdomain_is_still_absent(self):
+        r = assess_email_security("x.com", self._status_fetch(3))
+        spf = next(f for f in r.findings if f.check == "SPF")
+        self.assertEqual(spf.status, "FAIL")
