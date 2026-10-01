@@ -40,6 +40,7 @@ Source = "https://github.com/kyle4814/spoofguard"
 
 [project.scripts]
 spoofguard = "spoofguard.cli:main"
+spoofguard-mcp = "spoofguard.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["spoofguard*"]

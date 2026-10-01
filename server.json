@@ -1,0 +1,11 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kyle4814/spoofguard",
+  "description": "A zero-dependency, honest-by-construction email spoofing (SPF/DMARC/DKIM) posture scanner, exposed as an MCP server over stdio.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/kyle4814/spoofguard",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/kyle4814/spoofguard#readme"
+}

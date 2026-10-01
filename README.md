@@ -168,6 +168,59 @@ SpoofGuard batch — 3 domain(s), most exposed first
 
 `domains.txt` is one domain per line; `#` starts a comment.
 
+## MCP server
+
+SpoofGuard also runs as a Model Context Protocol (MCP) server, so an AI
+assistant or agent can call it as a tool instead of a human running the
+CLI. It speaks JSON-RPC 2.0 over stdio, uses the standard library only
+(same zero-dependency rule as the rest of the project), and reads public
+DNS only, same as everywhere else in this project.
+
+```bash
+python -m spoofguard.mcp_server
+```
+
+or, once installed:
+
+```bash
+spoofguard-mcp
+```
+
+Add it to an MCP client's config, for example:
+
+```json
+{
+  "mcpServers": {
+    "spoofguard": {
+      "command": "spoofguard-mcp"
+    }
+  }
+}
+```
+
+It exposes three tools:
+
+| Tool | What it does |
+|---|---|
+| `check_domain` | Full SPF/DMARC/DKIM/DNSSEC/MX/MTA-STS posture for one domain, as structured JSON plus a short text summary. |
+| `check_domains` | The same, for up to 25 domains in one call, sorted most exposed first. |
+| `explain_finding` | A static explanation of what a check or a status means in general. No network calls, and no claim about any specific domain. |
+
+Domain input is checked strictly before any lookup runs: no URLs, no IP
+addresses, and length limits consistent with a real DNS name. A Unicode
+domain is converted to its ASCII (punycode) form before the lookup, so it
+resolves correctly.
+
+The same honesty rule applies here as everywhere else in this project: a
+DNS lookup that fails grades UNKNOWN, never a confident PASS or FAIL. This
+is never reported back as a tool error, since an UNKNOWN result is still a
+complete and correct answer, not a failure.
+
+This server implements the MCP protocol's older, `initialize`-handshake
+lifecycle (protocol version `2025-06-18`), because that is what the MCP
+clients in real use today actually speak. See the top of
+`spoofguard/mcp_server.py` for the full reasoning and the sources checked.
+
 ## Honest limitations
 
 SpoofGuard is a **public-DNS posture signal**, not a full security audit,
